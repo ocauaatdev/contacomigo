@@ -19,10 +19,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<Object> register(@RequestBody UserCreateDTO dto){
         var result = service.create(dto);
-        try {
-            return ResponseEntity.ok().body(result);
-        } catch (Exception e){
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok().body(result);
     }
 }
