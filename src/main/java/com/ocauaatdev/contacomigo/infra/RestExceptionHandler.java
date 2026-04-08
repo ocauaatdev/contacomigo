@@ -1,9 +1,6 @@
 package com.ocauaatdev.contacomigo.infra;
 
-import com.ocauaatdev.contacomigo.exception.BusinessException;
-import com.ocauaatdev.contacomigo.exception.DataAlreadyExistsException;
-import com.ocauaatdev.contacomigo.exception.PasswordFormatException;
-import com.ocauaatdev.contacomigo.exception.TokenGenerationException;
+import com.ocauaatdev.contacomigo.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -35,5 +32,11 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     private ResponseEntity<RestErrorMessage> tokenGenerationErrorHandler(TokenGenerationException exception){
         RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(threatResponse);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    private ResponseEntity<RestErrorMessage> resourceNotFoundErrorHandler(ResourceNotFoundException exception){
+        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.NOT_FOUND, exception.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(threatResponse);
     }
 }
