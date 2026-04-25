@@ -23,25 +23,12 @@ public class UserService {
 
     public UserResponseDTO create(UserCreateDTO dto){
 
-        if (dto.name() == null || dto.name().isBlank()){
-            throw new BusinessException("User name cannot be empty");
-        }
-
-        if (dto.email() == null || dto.email().isBlank()){
-            throw new BusinessException("User email cannot be empty");
-        }
-        else if (repository.findByEmailIgnoreCase(dto.email()).isPresent()){
-            throw new DataAlreadyExistsException("This email already exists.");
-        }
+        validateUserInfos(dto.name(), dto.email());
 
         String regexPassword = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{7,}$";
 
         if (dto.password() == null || !dto.password().matches(regexPassword)) {
             throw new PasswordFormatException();
-        }
-
-        if (dto.balance() == null){
-            throw new BusinessException("User balance cannot be empty.");
         }
 
         String encryptedPassword = new BCryptPasswordEncoder().encode(dto.password());
@@ -50,11 +37,10 @@ public class UserService {
         user.setName(dto.name());
         user.setEmail(dto.email());
         user.setPassword(encryptedPassword);
-        user.setBalance(dto.balance());
 
         repository.save(user);
 
-        return new UserResponseDTO(user.getName(), user.getEmail(), user.getBalance());
+        return new UserResponseDTO(user.getName(), user.getEmail());
     }
 
     public UserResponseDTO update(UUID id, UserUpdateDTO dto){
@@ -62,28 +48,26 @@ public class UserService {
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-
-        if (dto.name() == null || dto.name().isBlank()){
-            throw new BusinessException("User name cannot be empty");
-        }
-
-        if (dto.email() == null || dto.email().isBlank()){
-            throw new BusinessException("User email cannot be empty");
-        }
-        else if (repository.findByEmailIgnoreCase(dto.email()).isPresent()){
-            throw new DataAlreadyExistsException("This email already exists.");
-        }
-
-        if (dto.balance() == null){
-            throw new BusinessException("User balance cannot be empty.");
-        }
+        validateUserInfos(dto.name(), dto.email());
 
         user.setName(dto.name());
         user.setEmail(dto.email());
-        user.setBalance(dto.balance());
 
         repository.save(user);
 
-        return new UserResponseDTO(user.getName(), user.getEmail(), user.getBalance());
+        return new UserResponseDTO(user.getName(), user.getEmail());
+    }
+
+    private void validateUserInfos(String name, String email){
+        if (name == null || name.isBlank()){
+            throw new BusinessException("User name cannot be empty");
+        }
+
+        if (email == null || email.isBlank()){
+            throw new BusinessException("User email cannot be empty");
+        }
+        else if (repository.findByEmailIgnoreCase(email).isPresent()){
+            throw new DataAlreadyExistsException("This email already exists.");
+        }
     }
 }
