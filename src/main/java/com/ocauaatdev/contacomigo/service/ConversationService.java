@@ -28,7 +28,7 @@ public class ConversationService {
 
     public ResponseConversationDTO newConversation(NewconversationDTO dto){
 
-        User user = userRepository.findById(dto.id())
+        User user = userRepository.findById(dto.idUser())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         String finalTitle = dto.title();

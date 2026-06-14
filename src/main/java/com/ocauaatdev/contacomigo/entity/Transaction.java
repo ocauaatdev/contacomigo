@@ -2,8 +2,10 @@ package com.ocauaatdev.contacomigo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,12 +19,21 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String type; // transformar em ENUM (EXPENSE, INCOME)
+    @Enumerated(EnumType.STRING)
+    private TypeTransaction type;
+
     private BigDecimal amount;
     private String description;
-    private String paymentMethod; // transformar em Enum (PIX, CREDIT, DEBIT, CASH)
-    private String category; //transformar em ENUM
-    private LocalDateTime transactionDate;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
+    private LocalDate transactionDate;
+
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @ManyToOne

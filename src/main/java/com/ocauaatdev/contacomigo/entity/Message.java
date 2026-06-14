@@ -16,7 +16,8 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String sender; //transformar em Enum (USER / SYSTEM)
+    @Enumerated(EnumType.STRING)
+    private Sender sender;
 
     private String content;
 
@@ -26,5 +27,10 @@ public class Message {
     @JoinColumn(name = "conversation_id")
     private Conversation conversation;
 
-
+    public Message(String systemResponseText, Sender sender, Conversation conversation, LocalDateTime now) {
+        this.content = systemResponseText;
+        this.sender = sender;
+        this.conversation = conversation;
+        this.createdAt = now;
+    }
 }
