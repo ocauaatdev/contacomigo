@@ -5,18 +5,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
-
-    @ExceptionHandler(PasswordFormatException.class)
-    private ResponseEntity<RestErrorMessage> passwordFormatHandler(PasswordFormatException exception){
-        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.BAD_REQUEST, exception.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(threatResponse);
-    }
 
     @ExceptionHandler(BusinessException.class)
     private ResponseEntity<RestErrorMessage> businessErrorHandler(BusinessException exception){
@@ -53,6 +48,12 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(threatResponse);
     }
+
+    /*@ExceptionHandler(MethodArgumentNotValidException.class)
+    private ResponseEntity<RestErrorMessage> methodArgumentNotValidErrorHandler(MethodArgumentNotValidException exception){
+        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.BAD_REQUEST, "Invalid input data.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(threatResponse);
+    }*/
 
 //    @ExceptionHandler(Exception.class)
 //    private ResponseEntity<RestErrorMessage> genericErrorHandler(Exception exception){

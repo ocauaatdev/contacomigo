@@ -1,4 +1,6 @@
 package com.ocauaatdev.contacomigo.dto.user;
 
-public record UserResponseDTO(String name, String email) {
+import java.util.UUID;
+
+public record UserResponseDTO(UUID id, String name, String email) {
 }

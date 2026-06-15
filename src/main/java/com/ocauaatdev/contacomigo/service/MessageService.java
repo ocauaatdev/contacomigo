@@ -55,8 +55,8 @@ public class MessageService {
                     null,
                     parsedData.paymentMethod(),
                     parsedData.transactionDate(),
-                    conversation.getUser(),
-                    conversation
+                    conversation.getUser().getId(),
+                    conversation.getId()
             );
 
             ResponseTransactionDTO transDTO = transactionService.registerTransaction(newTransDTO);

@@ -1,8 +1,10 @@
 package com.ocauaatdev.contacomigo.controller;
 
 import com.ocauaatdev.contacomigo.dto.user.UserCreateDTO;
+import com.ocauaatdev.contacomigo.dto.user.UserResponseDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserUpdateDTO;
 import com.ocauaatdev.contacomigo.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,14 +19,14 @@ public class UserController {
     private UserService service;
 
     @PostMapping("/register")
-    public ResponseEntity<Object> register(@RequestBody UserCreateDTO dto){
-        var result = service.create(dto);
+    public ResponseEntity<UserResponseDTO> register(@RequestBody @Valid UserCreateDTO dto){
+        UserResponseDTO result = service.create(dto);
         return ResponseEntity.ok().body(result);
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<Object> update(@PathVariable UUID id, @RequestBody UserUpdateDTO dto){
-        var result = service.update(id, dto);
+    public ResponseEntity<UserResponseDTO> update(@PathVariable UUID id, @RequestBody @Valid UserUpdateDTO dto){
+        UserResponseDTO result = service.update(id, dto);
         return ResponseEntity.ok().body(result);
     }
 }

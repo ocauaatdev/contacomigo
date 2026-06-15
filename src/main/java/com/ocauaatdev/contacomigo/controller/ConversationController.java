@@ -2,6 +2,7 @@ package com.ocauaatdev.contacomigo.controller;
 
 import com.ocauaatdev.contacomigo.dto.conversation.NewconversationDTO;
 import com.ocauaatdev.contacomigo.service.ConversationService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ public class ConversationController {
     private ConversationService service;
 
     @PostMapping("/new")
-    public ResponseEntity<Object> newConversation(@RequestBody NewconversationDTO dto){
+    public ResponseEntity<Object> newConversation(@RequestBody @Valid NewconversationDTO dto){
         var result = service.newConversation(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
