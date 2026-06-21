@@ -1,12 +1,16 @@
 package com.ocauaatdev.contacomigo.service;
 
+import com.ocauaatdev.contacomigo.dto.user.UpdatePasswordDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserCreateDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserResponseDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserUpdateDTO;
 import com.ocauaatdev.contacomigo.entity.User;
+import com.ocauaatdev.contacomigo.exception.AccessDeniedException;
+import com.ocauaatdev.contacomigo.exception.BusinessException;
 import com.ocauaatdev.contacomigo.exception.DataAlreadyExistsException;
 import com.ocauaatdev.contacomigo.exception.ResourceNotFoundException;
 import com.ocauaatdev.contacomigo.repository.UserRepository;
+import com.ocauaatdev.contacomigo.util.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +22,9 @@ public class UserService {
 
     @Autowired
     private UserRepository repository;
+
+    @Autowired
+    private SecurityUtils securityUtils;
 
     public UserResponseDTO create(UserCreateDTO dto) {
 
@@ -37,6 +44,8 @@ public class UserService {
 
     public UserResponseDTO update(UUID id, UserUpdateDTO dto) {
 
+        validateOwnership(id);
+
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
@@ -52,9 +61,51 @@ public class UserService {
         return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
     }
 
+    public void delete(UUID id) {
+
+        validateOwnership(id);
+
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        repository.delete(user);
+    }
+
+    public UserResponseDTO getById(UUID id) {
+        validateOwnership(id);
+
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
+    }
+
+    public void updatePassword(UUID id,UpdatePasswordDTO dto) {
+        validateOwnership(id);
+
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (!new BCryptPasswordEncoder().matches(dto.currentPassword(), user.getPassword())) {
+            throw new BusinessException("Current password is incorrect.");
+        }
+
+        String encryptedNewPassword = new BCryptPasswordEncoder().encode(dto.newPassword());
+        user.setPassword(encryptedNewPassword);
+
+        repository.save(user);
+    }
+
     private void validateEmailAlreadyExists(String email) {
         if (repository.findByEmailIgnoreCase(email).isPresent()) {
             throw new DataAlreadyExistsException("This email already exists.");
+        }
+    }
+
+    private void validateOwnership(UUID userId){
+        User authenticatedUser = securityUtils.getAuthenticatedUser();
+        if (!authenticatedUser.getId().equals(userId)) {
+            throw new AccessDeniedException("You are not authorized to perform this action.");
         }
     }
 }

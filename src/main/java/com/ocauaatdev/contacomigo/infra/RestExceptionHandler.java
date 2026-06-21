@@ -1,14 +1,19 @@
 package com.ocauaatdev.contacomigo.infra;
 
 import com.ocauaatdev.contacomigo.exception.*;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
@@ -49,15 +54,25 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(threatResponse);
     }
 
-    /*@ExceptionHandler(MethodArgumentNotValidException.class)
-    private ResponseEntity<RestErrorMessage> methodArgumentNotValidErrorHandler(MethodArgumentNotValidException exception){
-        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.BAD_REQUEST, "Invalid input data.");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(threatResponse);
-    }*/
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<RestErrorMessage> handleAccessDenied(AccessDeniedException ex) {
+        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.FORBIDDEN, "Access denied. You do not have permission to access this resource.");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(threatResponse);
+    }
 
-//    @ExceptionHandler(Exception.class)
-//    private ResponseEntity<RestErrorMessage> genericErrorHandler(Exception exception){
-//        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(threatResponse);
-//    }
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+
+        RestErrorMessage response = new RestErrorMessage(HttpStatus.BAD_REQUEST, message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
 }
