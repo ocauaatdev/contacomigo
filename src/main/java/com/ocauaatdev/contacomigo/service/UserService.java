@@ -5,7 +5,7 @@ import com.ocauaatdev.contacomigo.dto.user.UserCreateDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserResponseDTO;
 import com.ocauaatdev.contacomigo.dto.user.UserUpdateDTO;
 import com.ocauaatdev.contacomigo.entity.User;
-import com.ocauaatdev.contacomigo.exception.AccessDeniedException;
+import com.ocauaatdev.contacomigo.exception.ForbiddenException;
 import com.ocauaatdev.contacomigo.exception.BusinessException;
 import com.ocauaatdev.contacomigo.exception.DataAlreadyExistsException;
 import com.ocauaatdev.contacomigo.exception.ResourceNotFoundException;
@@ -105,7 +105,7 @@ public class UserService {
     private void validateOwnership(UUID userId){
         User authenticatedUser = securityUtils.getAuthenticatedUser();
         if (!authenticatedUser.getId().equals(userId)) {
-            throw new AccessDeniedException("You are not authorized to perform this action.");
+            throw new ForbiddenException("You are not authorized to perform this action.");
         }
     }
 }

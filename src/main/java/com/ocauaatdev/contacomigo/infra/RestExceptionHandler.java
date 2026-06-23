@@ -14,6 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.stream.Collectors;
+import com.ocauaatdev.contacomigo.exception.ForbiddenException;
 
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
@@ -54,8 +55,8 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(threatResponse);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<RestErrorMessage> handleAccessDenied(AccessDeniedException ex) {
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<RestErrorMessage> handleAccessDenied(ForbiddenException ex) {
         RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.FORBIDDEN, "Access denied. You do not have permission to access this resource.");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(threatResponse);
     }
