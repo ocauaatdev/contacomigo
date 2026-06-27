@@ -1,5 +1,6 @@
 package com.ocauaatdev.contacomigo.util;
 
+import com.ocauaatdev.contacomigo.entity.Category;
 import com.ocauaatdev.contacomigo.entity.PaymentMethod;
 import com.ocauaatdev.contacomigo.entity.TypeTransaction;
 
@@ -20,6 +21,7 @@ public class TransactionParser {
             BigDecimal amount,
             String description,
             TypeTransaction type,
+            Category category,
             PaymentMethod paymentMethod,
             LocalDate transactionDate
     ) {}
@@ -54,7 +56,9 @@ public class TransactionParser {
             // 4. LIMPAR DESCRIÇÃO FINAL
             String description = cleanDescription(remainderText);
 
-            return new ParsedData(amount, description, type, paymentMethod, transactionDate);
+            Category category = Category.OTHER;
+
+            return new ParsedData(amount, description, type, category, paymentMethod, transactionDate);
         }
 
         return null;

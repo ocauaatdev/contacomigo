@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class MessageService {
@@ -32,9 +33,9 @@ public class MessageService {
     private TransactionService transactionService;
 
     @Transactional
-    public MessageInteractionDTO sendMessage(SendMessageDTO dto) {
+    public MessageInteractionDTO sendMessage(UUID conversationId, SendMessageDTO dto) {
 
-        Conversation conversation = conversationRepository.findById(dto.conversationId())
+        Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
 
         // 1. Salva a mensagem do usuário
@@ -52,7 +53,7 @@ public class MessageService {
                     parsedData.description(),
                     parsedData.amount(),
                     parsedData.type(),
-                    null,
+                    parsedData.category(),
                     parsedData.paymentMethod(),
                     parsedData.transactionDate(),
                     conversation.getUser().getId(),
@@ -61,7 +62,10 @@ public class MessageService {
 
             ResponseTransactionDTO transDTO = transactionService.registerTransaction(newTransDTO);
 
+//            Montando a resposta do sistema:
+//            Se o type do parsed for EXPENSE(despesa) ele define como 'despesa', se não, define como 'receita'
             String tipo = parsedData.type() == TypeTransaction.EXPENSE ? "despesa" : "receita";
+
             systemResponseText = String.format("Registrado com sucesso! Nova %s de R$ %s em: '%s'.",
                     tipo, parsedData.amount(), parsedData.description());
         } else {

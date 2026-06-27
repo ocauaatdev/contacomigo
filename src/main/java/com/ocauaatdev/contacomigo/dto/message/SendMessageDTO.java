@@ -8,8 +8,6 @@ import java.util.UUID;
 
 public record SendMessageDTO(
         @NotBlank(message = "Content is required.")
-        String content,
-
-        @NotNull(message = "Conversation ID is required.")
-        UUID conversationId) {
+        String content
+){
 }
