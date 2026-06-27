@@ -5,13 +5,12 @@ import com.ocauaatdev.contacomigo.dto.message.ResponseMessageDTO;
 import com.ocauaatdev.contacomigo.dto.message.SendMessageDTO;
 import com.ocauaatdev.contacomigo.dto.transaction.NewTransactionDTO;
 import com.ocauaatdev.contacomigo.dto.transaction.ResponseTransactionDTO;
-import com.ocauaatdev.contacomigo.entity.Conversation;
-import com.ocauaatdev.contacomigo.entity.Message;
-import com.ocauaatdev.contacomigo.entity.Sender;
-import com.ocauaatdev.contacomigo.entity.TypeTransaction;
+import com.ocauaatdev.contacomigo.entity.*;
+import com.ocauaatdev.contacomigo.exception.ForbiddenException;
 import com.ocauaatdev.contacomigo.exception.ResourceNotFoundException;
 import com.ocauaatdev.contacomigo.repository.ConversationRepository;
 import com.ocauaatdev.contacomigo.repository.MessageRepository;
+import com.ocauaatdev.contacomigo.util.SecurityUtils;
 import com.ocauaatdev.contacomigo.util.TransactionParser;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,14 +31,19 @@ public class MessageService {
     @Autowired
     private TransactionService transactionService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
     @Transactional
     public MessageInteractionDTO sendMessage(UUID conversationId, SendMessageDTO dto) {
 
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
 
+        validateOwnership(conversation);
+
         // 1. Salva a mensagem do usuário
-        Message userMessage = new Message(dto.content(), Sender.USER, conversation, LocalDateTime.now());
+        Message userMessage = new Message(dto.content(), Sender.USER, conversation);
         messageRepository.save(userMessage);
 
         // 2. Tenta extrair dados financeiros
@@ -48,7 +52,6 @@ public class MessageService {
         String systemResponseText;
 
         if (parsedData != null) {
-            // Removido o conversation.getUser() que havia voltado para cá
             NewTransactionDTO newTransDTO = new NewTransactionDTO(
                     parsedData.description(),
                     parsedData.amount(),
@@ -73,7 +76,7 @@ public class MessageService {
         }
 
         // 3. Salva a resposta do sistema
-        Message systemMessage = new Message(systemResponseText, Sender.ASSISTANT, conversation, LocalDateTime.now());
+        Message systemMessage = new Message(systemResponseText, Sender.ASSISTANT, conversation);
         messageRepository.save(systemMessage);
 
         // 4. Monta os DTOs individuais
@@ -93,5 +96,12 @@ public class MessageService {
 
         // 5. Retorna tudo empacotado para o Front-end
         return new MessageInteractionDTO(userDto, systemDto);
+    }
+
+    private void validateOwnership(Conversation conversation) {
+        User authenticated = securityUtils.getAuthenticatedUser();
+        if (!conversation.getUser().getId().equals(authenticated.getId())) {
+            throw new ForbiddenException("You are not authorized to perform this action.");
+        }
     }
 }

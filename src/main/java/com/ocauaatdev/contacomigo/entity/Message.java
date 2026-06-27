@@ -2,6 +2,7 @@ package com.ocauaatdev.contacomigo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -21,16 +22,16 @@ public class Message {
 
     private String content;
 
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @ManyToOne
     @JoinColumn(name = "conversation_id")
     private Conversation conversation;
 
-    public Message(String systemResponseText, Sender sender, Conversation conversation, LocalDateTime now) {
+    public Message(String systemResponseText, Sender sender, Conversation conversation) {
         this.content = systemResponseText;
         this.sender = sender;
         this.conversation = conversation;
-        this.createdAt = now;
     }
 }

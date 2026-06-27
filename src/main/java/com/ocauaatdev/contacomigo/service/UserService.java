@@ -13,8 +13,10 @@ import com.ocauaatdev.contacomigo.repository.UserRepository;
 import com.ocauaatdev.contacomigo.util.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -26,26 +28,26 @@ public class UserService {
     @Autowired
     private SecurityUtils securityUtils;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public UserResponseDTO create(UserCreateDTO dto) {
 
         validateEmailAlreadyExists(dto.email());
 
-        String encryptedPassword = new BCryptPasswordEncoder().encode(dto.password());
+        String encryptedPassword = passwordEncoder.encode(dto.password());
 
         User user = new User();
         user.setName(dto.name());
         user.setEmail(dto.email());
         user.setPassword(encryptedPassword);
 
-        repository.save(user);
-
-        return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
+        User saved = repository.save(user);
+        return new UserResponseDTO(saved);
     }
 
     public UserResponseDTO update(UUID id, UserUpdateDTO dto) {
-
         validateOwnership(id);
-
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
@@ -53,31 +55,26 @@ public class UserService {
             validateEmailAlreadyExists(dto.email());
         }
 
-        user.setName(dto.name());
-        user.setEmail(dto.email());
+        user.setName(Objects.requireNonNullElse(dto.name(), user.getName()));
+        user.setEmail(Objects.requireNonNullElse(dto.email(), user.getEmail()));
 
         repository.save(user);
-
-        return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
+        return new UserResponseDTO(user);
     }
 
     public void delete(UUID id) {
-
         validateOwnership(id);
-
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-
         repository.delete(user);
     }
 
     public UserResponseDTO getById(UUID id) {
         validateOwnership(id);
-
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
+        return new UserResponseDTO(user);
     }
 
     public void updatePassword(UUID id,UpdatePasswordDTO dto) {
@@ -86,11 +83,11 @@ public class UserService {
         User user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        if (!new BCryptPasswordEncoder().matches(dto.currentPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
             throw new BusinessException("Current password is incorrect.");
         }
 
-        String encryptedNewPassword = new BCryptPasswordEncoder().encode(dto.newPassword());
+        String encryptedNewPassword = passwordEncoder.encode(dto.newPassword());
         user.setPassword(encryptedNewPassword);
 
         repository.save(user);

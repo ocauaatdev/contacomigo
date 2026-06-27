@@ -8,7 +8,6 @@ import com.ocauaatdev.contacomigo.entity.User;
 import com.ocauaatdev.contacomigo.exception.ForbiddenException;
 import com.ocauaatdev.contacomigo.exception.ResourceNotFoundException;
 import com.ocauaatdev.contacomigo.repository.ConversationRepository;
-import com.ocauaatdev.contacomigo.repository.UserRepository;
 import com.ocauaatdev.contacomigo.util.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,9 +22,6 @@ public class ConversationService {
 
     @Autowired
     private ConversationRepository repository;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @Autowired
     private SecurityUtils securityUtils;

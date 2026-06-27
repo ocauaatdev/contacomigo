@@ -15,6 +15,7 @@ import com.ocauaatdev.contacomigo.util.SecurityUtils;
 import com.ocauaatdev.contacomigo.util.TransactionFilter;
 import com.ocauaatdev.contacomigo.util.TransactionSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -101,9 +102,10 @@ public class TransactionService {
                 .and(TransactionSpecification.byCategory(filter.category()))
                 .and(TransactionSpecification.byPaymentMethod(filter.paymentMethod()));
 
-        return repository.findAll(spec).stream()
+        Sort sort = Sort.by(Sort.Direction.DESC, "transactionDate"); //Ordena do mais recente para o mais antigo
+
+        return repository.findAll(spec, sort).stream()
                 .map(ResponseTransactionDTO::new) //É o equivalente compacto de .map(t -> new ResponseTransactionDTO(t))
-                .sorted(Comparator.comparing(ResponseTransactionDTO::transactionDate).reversed()) //Ordena do mais recente para o mais antigo
                 .toList();
     }
 

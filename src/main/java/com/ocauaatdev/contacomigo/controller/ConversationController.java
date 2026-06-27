@@ -29,7 +29,7 @@ public class ConversationController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<Object> getAllConversations(){
         var result = service.getConversations();
         return ResponseEntity.ok(result);

@@ -1,7 +1,6 @@
 package com.ocauaatdev.contacomigo.util;
 
 import com.ocauaatdev.contacomigo.entity.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
