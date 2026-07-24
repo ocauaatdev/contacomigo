@@ -10,13 +10,16 @@ import com.ocauaatdev.contacomigo.exception.ForbiddenException;
 import com.ocauaatdev.contacomigo.exception.ResourceNotFoundException;
 import com.ocauaatdev.contacomigo.repository.ConversationRepository;
 import com.ocauaatdev.contacomigo.repository.MessageRepository;
+import com.ocauaatdev.contacomigo.util.MessageIntentParser;
 import com.ocauaatdev.contacomigo.util.SecurityUtils;
+import com.ocauaatdev.contacomigo.util.TransactionFilter;
 import com.ocauaatdev.contacomigo.util.TransactionParser;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,58 +47,106 @@ public class MessageService {
 
         // 1. Salva a mensagem do usuário
         Message userMessage = new Message(dto.content(), Sender.USER, conversation);
-        messageRepository.save(userMessage);
+        userMessage = messageRepository.saveAndFlush(userMessage);
 
-        // 2. Tenta extrair dados financeiros
-        TransactionParser.ParsedData parsedData = TransactionParser.parse(dto.content());
+        // 3. Detecta a intenção e roteia para o método correto
+        MessageIntent intent = MessageIntentParser.detect(dto.content());
 
-        String systemResponseText;
+        return switch (intent) {
+            case REGISTER_TRANSACTION -> handleRegister(dto.content(), conversation, userMessage);
+            case QUERY_EXTRACT        -> handleExtract(conversation, userMessage);
+            case UNKNOWN              -> handleUnknown(conversation, userMessage);
+        };
+    }
 
-        if (parsedData != null) {
-            NewTransactionDTO newTransDTO = new NewTransactionDTO(
-                    parsedData.description(),
-                    parsedData.amount(),
-                    parsedData.type(),
-                    parsedData.category(),
-                    parsedData.paymentMethod(),
-                    parsedData.transactionDate(),
-                    conversation.getUser().getId(),
-                    conversation.getId()
-            );
+    // ********* CASO 1: usuário quer registrar transação *********
+    private MessageInteractionDTO handleRegister(String content, Conversation conversation, Message userMessage){
+        TransactionParser.ParsedData parsed = TransactionParser.parse(content);
 
-            ResponseTransactionDTO transDTO = transactionService.registerTransaction(newTransDTO);
-
-//            Montando a resposta do sistema:
-//            Se o type do parsed for EXPENSE(despesa) ele define como 'despesa', se não, define como 'receita'
-            String tipo = parsedData.type() == TypeTransaction.EXPENSE ? "despesa" : "receita";
-
-            systemResponseText = String.format("Registrado com sucesso! Nova %s de R$ %s em: '%s'.",
-                    tipo, parsedData.amount(), parsedData.description());
-        } else {
-            systemResponseText = "Olá! Não entendi esse comando. Para registrar, use por exemplo: 'Gastei 35.90 uber' ou 'Ganhei 1500 salario'.";
+        if (parsed == null) {
+            return handleUnknown(conversation, userMessage);
         }
 
-        // 3. Salva a resposta do sistema
-        Message systemMessage = new Message(systemResponseText, Sender.ASSISTANT, conversation);
-        messageRepository.save(systemMessage);
-
-        // 4. Monta os DTOs individuais
-        ResponseMessageDTO userDto = new ResponseMessageDTO(
-                userMessage.getId(),
-                userMessage.getContent(),
-                userMessage.getSender(),
-                userMessage.getCreatedAt()
+        // Monta e salva a transação
+        NewTransactionDTO newTransDTO = new NewTransactionDTO(
+                parsed.description(),
+                parsed.amount(),
+                parsed.type(),
+                parsed.category(),
+                parsed.paymentMethod(),
+                parsed.transactionDate(),
+                conversation.getUser().getId(),
+                conversation.getId()
         );
 
-        ResponseMessageDTO systemDto = new ResponseMessageDTO(
-                systemMessage.getId(),
-                systemMessage.getContent(),
-                systemMessage.getSender(),
-                systemMessage.getCreatedAt()
+        ResponseTransactionDTO saved = transactionService.registerTransaction(newTransDTO);
+
+        // Monta a resposta do assistente
+        String tipo = parsed.type() == TypeTransaction.EXPENSE ? "despesa" : "receita";
+        String responseText = String.format(
+                "Registrado! Nova %s de R$ %s em '%s'.",
+                tipo, parsed.amount(), parsed.description()
         );
 
-        // 5. Retorna tudo empacotado para o Front-end
-        return new MessageInteractionDTO(userDto, systemDto);
+        Message systemMessage = new Message(responseText, Sender.ASSISTANT, conversation);
+        systemMessage = messageRepository.saveAndFlush(systemMessage);
+
+        // Retorna com o transactionId para o frontend montar os botões de editar/deletar
+        return new MessageInteractionDTO(
+                new ResponseMessageDTO(userMessage),
+                new ResponseMessageDTO(systemMessage),
+                saved.id(),   // frontend usa esse ID nos botões
+                null          // sem lista de transações nesse caso
+        );
+    }
+
+    // ********* CASO 2: usuário quer ver o extrato — padrão 30 dias *********
+    private MessageInteractionDTO handleExtract(
+            Conversation conversation, Message userMessage) {
+
+        // Filtro fixo: últimos 30 dias, sem outros filtros
+        TransactionFilter filter = new TransactionFilter(
+                LocalDate.now().minusDays(30),
+                LocalDate.now(),
+                null, null, null
+        );
+
+        List<ResponseTransactionDTO> transactions = transactionService.getAll(filter);
+
+        String responseText = transactions.isEmpty()
+                ? "Você não tem transações nos últimos 30 dias."
+                : String.format("Aqui está seu extrato dos últimos 30 dias (%d transações):",
+                transactions.size());
+
+        Message systemMessage = new Message(responseText, Sender.ASSISTANT, conversation);
+        systemMessage = messageRepository.saveAndFlush(systemMessage);
+
+        // Retorna com a lista de transações para o frontend renderizar o card de extrato
+        return new MessageInteractionDTO(
+                new ResponseMessageDTO(userMessage),
+                new ResponseMessageDTO(systemMessage),
+                null,          // sem transactionId nesse caso
+                transactions   // frontend usa essa lista para renderizar o extrato
+        );
+    }
+
+    // ********* CASO 3: mensagem não reconhecida *********
+    private MessageInteractionDTO handleUnknown(
+            Conversation conversation, Message userMessage) {
+
+        String responseText = "Não entendi esse comando. " +
+                "Exemplos do que posso fazer: " +
+                "'Gastei 50 uber', 'Ganhei 1500 salário', 'Ver meu extrato'.";
+
+        Message systemMessage = new Message(responseText, Sender.ASSISTANT, conversation);
+        systemMessage = messageRepository.saveAndFlush(systemMessage);
+
+        return new MessageInteractionDTO(
+                new ResponseMessageDTO(userMessage),
+                new ResponseMessageDTO(systemMessage),
+                null,
+                null
+        );
     }
 
     private void validateOwnership(Conversation conversation) {
