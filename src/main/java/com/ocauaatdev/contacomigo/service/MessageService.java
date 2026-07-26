@@ -3,6 +3,7 @@ package com.ocauaatdev.contacomigo.service;
 import com.ocauaatdev.contacomigo.dto.message.MessageInteractionDTO;
 import com.ocauaatdev.contacomigo.dto.message.ResponseMessageDTO;
 import com.ocauaatdev.contacomigo.dto.message.SendMessageDTO;
+import com.ocauaatdev.contacomigo.dto.message.UpdateMessageDTO;
 import com.ocauaatdev.contacomigo.dto.transaction.NewTransactionDTO;
 import com.ocauaatdev.contacomigo.dto.transaction.ResponseTransactionDTO;
 import com.ocauaatdev.contacomigo.entity.*;
@@ -16,6 +17,10 @@ import com.ocauaatdev.contacomigo.util.TransactionFilter;
 import com.ocauaatdev.contacomigo.util.TransactionParser;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -57,6 +62,62 @@ public class MessageService {
             case QUERY_EXTRACT        -> handleExtract(conversation, userMessage);
             case UNKNOWN              -> handleUnknown(conversation, userMessage);
         };
+    }
+
+    public Page<ResponseMessageDTO> getAllMessages(UUID conversationId, int page, int size){
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
+
+        validateOwnership(conversation);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        return messageRepository.findAllByConversation(conversation, pageable)
+                .map(ResponseMessageDTO::new);
+    }
+
+    public ResponseMessageDTO getMessage (UUID conversationId, UUID messageId){
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
+
+        validateOwnership(conversation);
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found."));
+
+        return new ResponseMessageDTO(message);
+    }
+
+    public void deleteMessage (UUID conversationId, UUID messageId){
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
+
+        validateOwnership(conversation);
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found."));
+        messageRepository.delete(message);
+    }
+
+    public ResponseMessageDTO updateMessage(UUID conversationId, UUID messageId, UpdateMessageDTO dto) {
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
+
+        validateOwnership(conversation);
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found."));
+
+        // Só o usuário pode editar suas próprias mensagens — não a do assistente
+        if (message.getSender() != Sender.USER) {
+            throw new ForbiddenException("You can only edit your own messages.");
+        }
+
+        message.setContent(dto.content());
+        Message updated = messageRepository.saveAndFlush(message);
+
+        return new ResponseMessageDTO(updated);
     }
 
     // ********* CASO 1: usuário quer registrar transação *********
