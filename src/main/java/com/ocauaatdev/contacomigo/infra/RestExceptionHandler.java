@@ -56,7 +56,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<RestErrorMessage> handleAccessDenied(ForbiddenException ex) {
-        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.FORBIDDEN, "Access denied. You do not have permission to access this resource.");
+        RestErrorMessage threatResponse = new RestErrorMessage(HttpStatus.FORBIDDEN, ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(threatResponse);
     }
 

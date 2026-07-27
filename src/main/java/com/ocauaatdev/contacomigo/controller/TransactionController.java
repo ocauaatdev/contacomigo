@@ -6,6 +6,7 @@ import com.ocauaatdev.contacomigo.entity.PaymentMethod;
 import com.ocauaatdev.contacomigo.entity.TypeTransaction;
 import com.ocauaatdev.contacomigo.service.TransactionService;
 import com.ocauaatdev.contacomigo.util.TransactionFilter;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -52,8 +53,8 @@ public class TransactionController {
         return ResponseEntity.ok(result);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Object> updateTransaction(@PathVariable UUID id, @RequestBody UpdateTransactionDTO dto){
+    @PatchMapping("/{id}")
+    public ResponseEntity<Object> updateTransaction(@PathVariable UUID id, @RequestBody @Valid UpdateTransactionDTO dto){
         var result = service.updateTransaction(id, dto);
         return ResponseEntity.ok(result);
     }
