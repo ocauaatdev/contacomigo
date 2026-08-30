@@ -1,5 +1,7 @@
 package com.ocauaatdev.contacomigo.service;
 
+import com.ocauaatdev.contacomigo.ai.GeminiTransactionExtractor;
+import com.ocauaatdev.contacomigo.dto.AiExtractedTransactionDTO;
 import com.ocauaatdev.contacomigo.dto.message.MessageInteractionDTO;
 import com.ocauaatdev.contacomigo.dto.message.ResponseMessageDTO;
 import com.ocauaatdev.contacomigo.dto.message.SendMessageDTO;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -42,6 +45,9 @@ public class MessageService {
     @Autowired
     private SecurityUtils securityUtils;
 
+    @Autowired
+    private GeminiTransactionExtractor aiTransactionExtractor;
+
     @Transactional
     public MessageInteractionDTO sendMessage(UUID conversationId, SendMessageDTO dto) {
 
@@ -52,7 +58,7 @@ public class MessageService {
 
         // 1. Salva a mensagem do usuário
         Message userMessage = new Message(dto.content(), Sender.USER, conversation);
-        userMessage = messageRepository.saveAndFlush(userMessage);
+        userMessage = messageRepository.saveAndFlush(userMessage); // Salva e atualiza o objeto com o ID gerado
 
         // 3. Detecta a intenção e roteia para o método correto
         MessageIntent intent = MessageIntentParser.detect(dto.content());
@@ -120,9 +126,50 @@ public class MessageService {
         return new ResponseMessageDTO(updated);
     }
 
+    // Este método converte o DTO retornado pela AI em um objeto ParsedData, que é usado para criar a transação
+    private TransactionParser.ParsedData toParsedData(AiExtractedTransactionDTO ai){
+
+        //Verifica se a categoria retornada pela AI é valida; se for, converte a String para o enum Category; caso contrário, usa OTHER
+        Category category;
+        try {
+            category = Category.fromString(ai.category());
+        } catch (IllegalArgumentException e) {
+            category = Category.OTHER; // Se a categoria não for reconhecida, use OTHER
+        }
+
+        // Verifica se a forma de pagamento retornada pela AI é valida; se for, converte a String para o enum PaymentMethod; caso contrário, usa null
+        PaymentMethod paymentMethod = null;
+        if (ai.paymentMethod() != null){
+            try {
+                paymentMethod = PaymentMethod.fromString(ai.paymentMethod());
+            } catch (IllegalArgumentException e) {
+                 // Se a forma de pagamento não for reconhecida, use null
+            }
+        }
+
+        // Verifica se o tipo de transação retornado pela AI é "INCOME" ou "EXPENSE";
+        TypeTransaction type = "INCOME".equalsIgnoreCase(ai.type())
+                ? TypeTransaction.INCOME
+                : TypeTransaction.EXPENSE;
+
+        return new TransactionParser.ParsedData(
+                ai.amount(),
+                ai.description(),
+                type,
+                category,
+                paymentMethod,
+                LocalDate.now()
+        );
+    }
+
     // ********* CASO 1: usuário quer registrar transação *********
     private MessageInteractionDTO handleRegister(String content, Conversation conversation, Message userMessage){
-        TransactionParser.ParsedData parsed = TransactionParser.parse(content);
+
+        Optional<AiExtractedTransactionDTO> aiResult = aiTransactionExtractor.extract(content);
+
+        TransactionParser.ParsedData parsed = aiResult
+                .map(this::toParsedData)          // converte esse aiResult (AiExtractedTransactionDTO) em ParsedData usando o método toParsedData
+                .orElseGet(() -> TransactionParser.parse(content)); // fallback se a IA falhar
 
         if (parsed == null) {
             return handleUnknown(conversation, userMessage);
@@ -140,6 +187,7 @@ public class MessageService {
                 conversation.getId()
         );
 
+        // Salva a transação no banco de dados
         ResponseTransactionDTO saved = transactionService.registerTransaction(newTransDTO);
 
         // Monta a resposta do assistente
@@ -156,7 +204,7 @@ public class MessageService {
         return new MessageInteractionDTO(
                 new ResponseMessageDTO(userMessage),
                 new ResponseMessageDTO(systemMessage),
-                saved.id(),   // frontend usa esse ID nos botões
+                saved.id(),   // frontend usa esse ID da Transaction nos botões
                 null          // sem lista de transações nesse caso
         );
     }
