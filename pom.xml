@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring-ai.version>2.0.0-M6</spring-ai.version>
+		<lombok.version>1.18.48</lombok.version>
 	</properties>
 
 	<!--	DEPENDENCIAS	-->
@@ -54,12 +55,11 @@
 		</dependency>
 
 		<!--   Lombok     -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.46</version>
-            <scope>compile</scope>
-        </dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+		</dependency>
 
 		<!-- Data Jpa Test -->
 		<dependency>
@@ -116,6 +116,18 @@
 			<artifactId>spring-ai-starter-model-google-genai</artifactId>
 		</dependency>
 
+		<!-- Flyway -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+
+		<!-- Flyway PostgreSQL -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<dependencyManagement>
@@ -140,6 +152,7 @@
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>

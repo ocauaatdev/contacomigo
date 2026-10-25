@@ -20,6 +20,7 @@ public class Message {
     @Enumerated(EnumType.STRING)
     private Sender sender;
 
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     @CreationTimestamp
